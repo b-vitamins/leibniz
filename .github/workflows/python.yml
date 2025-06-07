@@ -95,6 +95,9 @@ jobs:
       - name: Run performance tests
         run: |
           pytest tests/performance -v --benchmark-only --benchmark-json=benchmark.json || echo "No performance tests yet"
+      - name: Ensure benchmark.json
+        run: |
+          if [ ! -s benchmark.json ]; then echo '{"benchmarks": []}' > benchmark.json; fi
       - name: Store benchmark result
         if: success() && hashFiles('benchmark.json') != ''
         uses: benchmark-action/github-action-benchmark@v1
