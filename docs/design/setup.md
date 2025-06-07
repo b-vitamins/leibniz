@@ -1,8 +1,8 @@
 # Project Leibniz - Development Environment Setup Guide
 
-**Version:** 1.0  
+**Version:** 2.0  
 **Date:** June 2025
-**Status:** Ready for Use  
+**Status:** Revised with OpenAlex Integration  
 **Time to Complete:** 30 minutes
 
 ## 1. Quick Start (5 minutes)
@@ -22,9 +22,9 @@ cd project-leibniz
 # 1. Check prerequisites
 ./scripts/check-prerequisites.sh
 
-# 2. Create environment file
+# 2. Create environment file with OpenAlex config
 cp .env.example .env
-# Edit .env with your OpenAI API key
+# Edit .env with your OpenAI API key and email for OpenAlex
 
 # 3. Start all services
 docker-compose up -d
@@ -32,39 +32,42 @@ docker-compose up -d
 # 4. Verify health
 ./scripts/health-check.sh
 
-# 5. Load sample data (optional for testing)
-./scripts/load-sample-data.sh
+# 5. Test OpenAlex connection
+./scripts/test-openalex.sh
+
+# 6. Load sample data with metadata
+./scripts/load-sample-data.sh --with-openalex
 ```
 
 ## 2. Prerequisites
 
 ### 2.1 Required Software
 
-| Software | Minimum Version | Check Command | Install Guide |
-|----------|----------------|---------------|---------------|
-| Docker | 20.10+ | `docker --version` | https://docs.docker.com/get-docker/ |
-| Docker Compose | 2.0+ | `docker-compose --version` | Included with Docker Desktop |
-| Git | 2.30+ | `git --version` | https://git-scm.com/downloads |
-| Python | 3.10+ | `python3 --version` | https://python.org/downloads |
-| Node.js | 18+ | `node --version` | https://nodejs.org |
-| Make | 3.81+ | `make --version` | Usually pre-installed |
+| Software       | Minimum Version | Check Command              | Install Guide                       |
+|----------------|-----------------|----------------------------|-------------------------------------|
+| Docker         | 20.10+          | `docker --version`         | https://docs.docker.com/get-docker/ |
+| Docker Compose | 2.0+            | `docker-compose --version` | Included with Docker Desktop        |
+| Git            | 2.30+           | `git --version`            | https://git-scm.com/downloads       |
+| Python         | 3.10+           | `python3 --version`        | https://python.org/downloads        |
+| Node.js        | 18+             | `node --version`           | https://nodejs.org                  |
+| Make           | 3.81+           | `make --version`           | Usually pre-installed               |
 
-Run `scripts/verify-docker.sh` to confirm Docker is ready:
+### 2.2 API Requirements
 
-```bash
-./scripts/verify-docker.sh
-```
+- **OpenAI API Key**: Required for embeddings and synthesis
+- **OpenAlex**: No API key needed, but polite crawling requires email
+- **Internet Connection**: Required for metadata fetching
 
-### 2.2 Hardware Requirements
+### 2.3 Hardware Requirements
 
 - **RAM:** 16GB minimum (32GB recommended)
-- **Storage:** 100GB free space (for papers + indexes)
+- **Storage:** 100GB free space (for papers + indexes + metadata)
 - **CPU:** 4+ cores (8+ recommended)
 - **Network:** Stable internet for API calls
 
 ## 3. Automated Setup Scripts
 
-### 3.1 Main Setup Script
+### 3.1 Main Setup Script (Enhanced)
 
 ```bash
 #!/bin/bash
@@ -80,13 +83,16 @@ echo "🚀 Project Leibniz Setup Starting..."
 # Setup environment
 if [ ! -f .env ]; then
     cp .env.example .env
-    echo "⚠️  Please edit .env with your API keys"
-    read -p "Press enter after adding your OpenAI API key..."
+    echo "⚠️  Please edit .env with your API keys and email"
+    echo "   - OpenAI API key (required)"
+    echo "   - Email for OpenAlex polite crawling (recommended)"
+    read -p "Press enter after adding your credentials..."
 fi
 
-# Create necessary directories
-mkdir -p data/{pdfs,processed,embeddings,cache}
-mkdir -p logs/{services,frontend}
+# Create necessary directories with OpenAlex structure
+mkdir -p data/{works,cache,indices,pdfs,processed,embeddings}
+mkdir -p logs/{services,frontend,openalex}
+mkdir -p scripts/prefetch
 
 # Pull all Docker images in parallel
 echo "📦 Pulling Docker images..."
@@ -114,57 +120,60 @@ echo "⏳ Waiting for services to be healthy..."
 echo "🏥 Running health checks..."
 ./scripts/health-check.sh
 
+# Test OpenAlex connectivity
+echo "🌐 Testing OpenAlex API..."
+./scripts/test-openalex.sh
+
+# Initialize Neo4j schema for OpenAlex
+echo "📊 Setting up Neo4j schema..."
+./scripts/init-neo4j-schema.sh
+
 echo "✅ Setup complete! Run 'make dev' to start developing"
 ```
 
-### 3.2 Prerequisites Check Script
+### 3.2 OpenAlex Test Script
 
 ```bash
 #!/bin/bash
-# scripts/check-prerequisites.sh
+# scripts/test-openalex.sh
 
-ERRORS=0
+echo "🌐 Testing OpenAlex API connectivity..."
 
-check_command() {
-    if ! command -v $1 &> /dev/null; then
-        echo "❌ $1 is not installed"
-        ERRORS=$((ERRORS + 1))
-    else
-        VERSION=$($2)
-        echo "✅ $1: $VERSION"
-    fi
-}
+# Test with a known paper (Attention Is All You Need)
+python3 << 'EOF'
+import httpx
+import json
+import os
 
-echo "Checking prerequisites..."
+email = os.getenv("OPENALEX_EMAIL", "test@example.com")
+test_doi = "10.48550/arXiv.1706.03762"
 
-check_command "docker" "docker --version"
-check_command "docker-compose" "docker-compose --version"
-check_command "git" "git --version"
-check_command "python3" "python3 --version"
-check_command "node" "node --version"
-check_command "npm" "npm --version"
+print(f"Using email: {email}")
+print(f"Testing with DOI: {test_doi}")
 
-# Check Docker daemon
-if ! docker info &> /dev/null; then
-    echo "❌ Docker daemon is not running"
-    ERRORS=$((ERRORS + 1))
-fi
-
-# Check available memory
-AVAILABLE_MEMORY=$(free -g | awk '/^Mem:/{print $7}')
-if [ "$AVAILABLE_MEMORY" -lt 8 ]; then
-    echo "⚠️  Low memory available: ${AVAILABLE_MEMORY}GB (16GB recommended)"
-fi
-
-if [ $ERRORS -gt 0 ]; then
-    echo "❌ Prerequisites check failed with $ERRORS errors"
-    exit 1
-else
-    echo "✅ All prerequisites satisfied"
-fi
+try:
+    response = httpx.get(
+        f"https://api.openalex.org/works/doi:{test_doi}",
+        params={"mailto": email},
+        timeout=10.0
+    )
+    
+    if response.status_code == 200:
+        work = response.json()
+        print(f"✅ OpenAlex API working!")
+        print(f"   Found: {work['title']}")
+        print(f"   Citations: {work['cited_by_count']}")
+        print(f"   Work ID: {work['id'].split('/')[-1]}")
+    else:
+        print(f"❌ OpenAlex returned status {response.status_code}")
+        
+except Exception as e:
+    print(f"❌ OpenAlex test failed: {e}")
+    print("   Check your internet connection")
+EOF
 ```
 
-### 3.3 Health Check Script
+### 3.3 Enhanced Health Check Script
 
 ```bash
 #!/bin/bash
@@ -175,6 +184,7 @@ echo "🏥 Running health checks..."
 # Color codes
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 check_service() {
@@ -201,6 +211,24 @@ check_service "API Gateway" 3000 "/health" || true
 check_service "Query Service" 8001 "/health" || true
 check_service "Frontend" 5173 || true
 
+# Check OpenAlex metadata cache
+echo -e "\n📊 Checking metadata cache..."
+CACHED_WORKS=$(redis-cli --raw KEYS "oa:work:*" | wc -l)
+if [ "$CACHED_WORKS" -gt 0 ]; then
+    echo -e "${GREEN}✅ OpenAlex cache has $CACHED_WORKS work objects${NC}"
+else
+    echo -e "${YELLOW}⚠️  OpenAlex cache is empty (run data loading)${NC}"
+fi
+
+# Check Neo4j for Work nodes
+echo -e "\n🗂️  Checking graph database..."
+WORK_COUNT=$(echo "MATCH (w:Work) RETURN COUNT(w) as count" | cypher-shell -u neo4j -p leibniz123 --format plain 2>/dev/null | grep -o '[0-9]\+' || echo "0")
+if [ "$WORK_COUNT" -gt 0 ]; then
+    echo -e "${GREEN}✅ Neo4j has $WORK_COUNT Work nodes${NC}"
+else
+    echo -e "${YELLOW}⚠️  Neo4j has no Work nodes yet${NC}"
+fi
+
 # Check service logs for errors
 echo -e "\n📋 Checking logs for errors..."
 if docker-compose logs --tail=50 | grep -i error > /dev/null; then
@@ -212,7 +240,7 @@ fi
 
 ## 4. Environment Configuration
 
-### 4.1 Environment Variables
+### 4.1 Environment Variables (Enhanced)
 
 ```bash
 # .env.example
@@ -220,6 +248,11 @@ fi
 # API Keys
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4-turbo-preview
+
+# OpenAlex Configuration
+OPENALEX_EMAIL=your-email@example.com  # For polite crawling
+OPENALEX_RATE_LIMIT=10  # Requests per second
+OPENALEX_CACHE_TTL=86400  # 24 hours
 
 # Service URLs (for local development)
 REDIS_URL=redis://localhost:6379
@@ -241,9 +274,15 @@ BATCH_SIZE=100
 DEBUG=true
 LOG_LEVEL=info
 HOT_RELOAD=true
+
+# Data Paths
+DATA_DIR=./data
+WORKS_DIR=./data/works
+CACHE_DIR=./data/cache
+INDEX_DIR=./data/indices
 ```
 
-### 4.2 Docker Compose Configuration
+### 4.2 Docker Compose Configuration (Enhanced)
 
 ```yaml
 # docker-compose.yml
@@ -252,13 +291,17 @@ version: '3.8'
 x-common-variables: &common-variables
   REDIS_URL: ${REDIS_URL}
   LOG_LEVEL: ${LOG_LEVEL}
+  OPENALEX_EMAIL: ${OPENALEX_EMAIL}
 
 services:
+  # Enhanced Redis with persistence
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
     volumes:
       - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -273,9 +316,11 @@ services:
       - NEO4J_dbms_memory_heap_initial__size=2G
       - NEO4J_dbms_memory_heap_max__size=4G
       - NEO4J_dbms_memory_pagecache_size=2G
+      - NEO4J_PLUGINS=["graph-data-science"]
     volumes:
       - neo4j_data:/data
       - ./neo4j/plugins:/plugins
+      - ./neo4j/import:/import
     healthcheck:
       test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "${NEO4J_PASSWORD}", "RETURN 1"]
       interval: 10s
@@ -291,6 +336,7 @@ services:
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__SERVICE__GRPC_PORT=6334
       - QDRANT__LOG_LEVEL=INFO
+      - QDRANT__STORAGE__OPTIMIZERS__MEMMAP_THRESHOLD_KB=50000
 
   meilisearch:
     image: getmeili/meilisearch:v1.5
@@ -308,6 +354,20 @@ services:
       - GROBID_SERVICE_OPTS=-Xmx4g
     volumes:
       - ./grobid/config:/opt/grobid/grobid-home/config
+
+  # Data pipeline service (new)
+  data-pipeline:
+    build: ./services/pipeline
+    environment:
+      <<: *common-variables
+      OPENALEX_RATE_LIMIT: ${OPENALEX_RATE_LIMIT}
+    depends_on:
+      - redis
+      - neo4j
+    volumes:
+      - ./data/works:/data/works
+      - ./logs/openalex:/logs
+    profiles: ["pipeline"]
 
   # Application services
   api-gateway:
@@ -334,8 +394,10 @@ services:
       - qdrant
       - neo4j
       - meilisearch
+      - redis
     volumes:
       - ./services/query:/app
+      - ./data/works:/data/works:ro
     command: uvicorn main:app --reload --host 0.0.0.0 --port 8001
 
   frontend:
@@ -355,22 +417,50 @@ volumes:
   meilisearch_data:
 ```
 
+### 4.3 Redis Configuration
+
+```conf
+# redis.conf
+# Persistence settings for metadata caching
+save 900 1
+save 300 10
+save 60 10000
+
+# Append only file
+appendonly yes
+appendfsync everysec
+
+# Memory policy - LRU for cache behavior
+maxmemory 4gb
+maxmemory-policy allkeys-lru
+
+# Enable keyspace notifications
+notify-keyspace-events KEA
+
+# Performance tuning
+tcp-backlog 511
+timeout 0
+tcp-keepalive 300
+```
+
 ## 5. Development Workflows
 
-### 5.1 Makefile Commands
+### 5.1 Makefile Commands (Enhanced)
 
 ```makefile
 # Makefile
-.PHONY: help dev stop clean test benchmark
+.PHONY: help dev stop clean test benchmark ingest-data
 
 help:
 	@echo "Project Leibniz Development Commands"
-	@echo "  make dev        - Start all services in development mode"
-	@echo "  make stop       - Stop all services"
-	@echo "  make clean      - Clean all data and rebuild"
-	@echo "  make test       - Run all tests"
-	@echo "  make benchmark  - Run performance benchmarks"
-	@echo "  make logs       - Tail all service logs"
+	@echo "  make dev           - Start all services in development mode"
+	@echo "  make stop          - Stop all services"
+	@echo "  make clean         - Clean all data and rebuild"
+	@echo "  make test          - Run all tests"
+	@echo "  make benchmark     - Run performance benchmarks"
+	@echo "  make logs          - Tail all service logs"
+	@echo "  make ingest-data   - Ingest sample papers with OpenAlex"
+	@echo "  make cache-status  - Show cache statistics"
 
 dev:
 	docker-compose up -d
@@ -379,12 +469,15 @@ dev:
 	@echo "  API Gateway:  http://localhost:3000"
 	@echo "  Neo4j:        http://localhost:7474"
 	@echo "  QDrant:       http://localhost:6333/dashboard"
+	@echo ""
+	@echo "Run 'make ingest-data' to load sample papers"
 
 stop:
 	docker-compose down
 
 clean:
 	docker-compose down -v
+	rm -rf data/works/*
 	rm -rf data/processed/*
 	rm -rf data/embeddings/*
 	rm -rf logs/*
@@ -397,6 +490,19 @@ benchmark:
 
 logs:
 	docker-compose logs -f
+
+ingest-data:
+	@echo "📚 Ingesting sample papers with OpenAlex metadata..."
+	python scripts/ingest_sample_data.py
+
+cache-status:
+	@echo "📊 Cache Statistics:"
+	@echo "OpenAlex Works:"
+	@redis-cli --raw KEYS "oa:work:*" | wc -l
+	@echo "Query Results:"
+	@redis-cli --raw KEYS "qr:*" | wc -l
+	@echo "Concepts:"
+	@redis-cli --raw KEYS "concepts:*" | wc -l
 ```
 
 ### 5.2 Development Commands
@@ -408,26 +514,202 @@ make dev
 # Watch logs for a specific service
 docker-compose logs -f query-service
 
+# Monitor OpenAlex ingestion
+tail -f logs/openalex/ingestion.log
+
 # Enter a service container
 docker-compose exec query-service bash
 
-# Run a specific test
-pytest services/query/tests/test_vector_search.py -v
+# Run OpenAlex batch ingestion
+docker-compose run --rm data-pipeline python ingest_conference.py --venue NeurIPS --year 2023
 
-# Check performance
-python scripts/benchmark.py --endpoint /api/v1/query --iterations 100
+# Check Neo4j for citation patterns
+echo "MATCH (w1:Work)-[:CITES]->(w2:Work) RETURN w1.title, w2.title LIMIT 10" | cypher-shell -u neo4j -p leibniz123
 
-# Rebuild a specific service
-docker-compose build query-service
-docker-compose up -d query-service
+# Monitor cache hit rates
+redis-cli --stat
 
-# Load sample data for testing
-./scripts/load-sample-data.sh --papers 100
+# Load specific paper by DOI
+python scripts/ingest_paper.py --doi "10.1145/3297280.3297641"
+
+# Pre-fetch popular papers
+python scripts/prefetch_popular.py --limit 100
 ```
 
-## 6. IDE Configuration
+## 6. Neo4j Schema Initialization
 
-### 6.1 VS Code Settings
+### 6.1 Schema Setup Script
+
+```bash
+#!/bin/bash
+# scripts/init-neo4j-schema.sh
+
+echo "📊 Initializing Neo4j schema for OpenAlex..."
+
+cypher-shell -u neo4j -p leibniz123 << 'EOF'
+// Create constraints for data integrity
+CREATE CONSTRAINT work_id IF NOT EXISTS FOR (w:Work) REQUIRE w.id IS UNIQUE;
+CREATE CONSTRAINT author_id IF NOT EXISTS FOR (a:Author) REQUIRE a.id IS UNIQUE;
+CREATE CONSTRAINT venue_id IF NOT EXISTS FOR (v:Venue) REQUIRE v.id IS UNIQUE;
+CREATE CONSTRAINT concept_id IF NOT EXISTS FOR (c:Concept) REQUIRE c.id IS UNIQUE;
+CREATE CONSTRAINT institution_id IF NOT EXISTS FOR (i:Institution) REQUIRE i.id IS UNIQUE;
+
+// Create indexes for performance
+CREATE INDEX work_title IF NOT EXISTS FOR (w:Work) ON (w.title);
+CREATE INDEX work_year IF NOT EXISTS FOR (w:Work) ON (w.year);
+CREATE INDEX work_citations IF NOT EXISTS FOR (w:Work) ON (w.cited_by_count);
+CREATE INDEX author_name IF NOT EXISTS FOR (a:Author) ON (a.display_name);
+CREATE INDEX venue_name IF NOT EXISTS FOR (v:Venue) ON (v.display_name);
+CREATE INDEX concept_name IF NOT EXISTS FOR (c:Concept) ON (c.display_name);
+
+// Create full-text search indexes
+CREATE FULLTEXT INDEX work_search IF NOT EXISTS FOR (w:Work) ON EACH [w.title, w.abstract];
+CREATE FULLTEXT INDEX author_search IF NOT EXISTS FOR (a:Author) ON EACH [a.display_name];
+
+RETURN "Schema initialized successfully" as message;
+EOF
+
+echo "✅ Neo4j schema ready for OpenAlex data"
+```
+
+## 7. Data Loading Scripts
+
+### 7.1 Sample Data Ingestion
+
+```python
+#!/usr/bin/env python3
+# scripts/ingest_sample_data.py
+
+import asyncio
+import sys
+sys.path.append('.')
+from services.openalex.client import OpenAlexClient
+from services.pipeline.ingest import IngestionPipeline
+
+async def ingest_sample_data():
+    """Load sample papers for development"""
+    
+    pipeline = IngestionPipeline()
+    
+    # Key papers for testing
+    sample_papers = [
+        # Foundational papers
+        ("10.48550/arXiv.1706.03762", "Attention Is All You Need"),
+        ("10.48550/arXiv.1810.04805", "BERT: Pre-training of Deep Bidirectional Transformers"),
+        ("10.48550/arXiv.2005.14165", "Language Models are Few-Shot Learners (GPT-3)"),
+        
+        # Vision papers
+        ("10.48550/arXiv.2010.11929", "An Image is Worth 16x16 Words: Vision Transformer"),
+        ("10.48550/arXiv.2103.14030", "Swin Transformer"),
+        
+        # Efficiency papers
+        ("10.48550/arXiv.2009.06732", "Efficient Transformers: A Survey"),
+        ("10.48550/arXiv.2205.07686", "FlashAttention"),
+        
+        # Recent papers
+        ("10.48550/arXiv.2302.13971", "LLaMA: Open and Efficient Foundation Language Models"),
+        ("10.48550/arXiv.2307.09288", "Llama 2: Open Foundation and Fine-Tuned Chat Models"),
+    ]
+    
+    print("📚 Ingesting sample papers...\n")
+    
+    for doi, title in sample_papers:
+        print(f"→ {title}")
+        try:
+            work_id = await pipeline.ingest_paper(doi)
+            if work_id:
+                print(f"  ✅ Ingested as {work_id}")
+            else:
+                print(f"  ❌ Failed to ingest")
+        except Exception as e:
+            print(f"  ❌ Error: {e}")
+        
+        # Be polite to OpenAlex
+        await asyncio.sleep(0.5)
+    
+    # Also get some recent conference papers
+    print("\n📚 Fetching recent conference papers...")
+    
+    for venue in ["NeurIPS", "ICML", "ICLR"]:
+        print(f"\n→ {venue} 2023 (top 20 by citations)")
+        try:
+            await pipeline.ingest_conference(venue, 2023, limit=20)
+            print(f"  ✅ Ingested top papers from {venue} 2023")
+        except Exception as e:
+            print(f"  ❌ Error: {e}")
+    
+    print("\n✨ Sample data ingestion complete!")
+    print("   Run 'make cache-status' to see what was loaded")
+
+if __name__ == "__main__":
+    asyncio.run(ingest_sample_data())
+```
+
+### 7.2 Popular Papers Pre-fetch
+
+```python
+#!/usr/bin/env python3
+# scripts/prefetch_popular.py
+
+import asyncio
+import argparse
+from pathlib import Path
+
+async def prefetch_popular_papers(limit: int = 100):
+    """Pre-fetch most cited papers for each conference"""
+    
+    client = OpenAlexClient()
+    
+    conferences = [
+        ("NeurIPS", [2021, 2022, 2023]),
+        ("ICML", [2021, 2022, 2023]),
+        ("ICLR", [2021, 2022, 2023]),
+    ]
+    
+    print(f"📚 Pre-fetching top {limit} papers per conference/year...")
+    
+    for venue, years in conferences:
+        for year in years:
+            print(f"\n→ {venue} {year}")
+            
+            # Fetch sorted by citations
+            papers = await client.get_conference_papers(venue, year)
+            papers.sort(key=lambda x: x.get('cited_by_count', 0), reverse=True)
+            
+            # Take top N
+            for paper in papers[:limit]:
+                work_id = paper['id'].split('/')[-1]
+                work_dir = Path(f"data/works/{work_id}")
+                
+                if work_dir.exists():
+                    continue
+                
+                work_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Save metadata
+                with open(work_dir / "work.json", "w") as f:
+                    json.dump(paper, f, indent=2)
+                
+                # Cache in Redis too
+                await redis_client.setex(
+                    f"oa:work:{work_id}",
+                    86400 * 7,  # 1 week
+                    json.dumps(paper)
+                )
+            
+            print(f"  ✅ Cached top {min(limit, len(papers))} papers")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--limit", type=int, default=100)
+    args = parser.parse_args()
+    
+    asyncio.run(prefetch_popular_papers(args.limit))
+```
+
+## 8. IDE Configuration
+
+### 8.1 VS Code Settings (Enhanced)
 
 ```json
 // .vscode/settings.json
@@ -448,11 +730,23 @@ docker-compose up -d query-service
   },
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  // File associations for OpenAlex data
+  "files.associations": {
+    "**/data/works/*/work.json": "json",
+    "**/data/works/*/grobid.tei.xml": "xml"
+  },
+  // Exclude data directories from search
+  "search.exclude": {
+    "**/data/works": true,
+    "**/data/cache": true,
+    "**/node_modules": true,
+    "**/.git": true
   }
 }
 ```
 
-### 6.2 Debug Configurations
+### 8.2 Debug Configurations (Enhanced)
 
 ```json
 // .vscode/launch.json
@@ -469,150 +763,144 @@ docker-compose up -d query-service
       "envFile": "${workspaceFolder}/.env"
     },
     {
-      "name": "Frontend",
-      "type": "chrome",
+      "name": "OpenAlex Ingestion",
+      "type": "python",
       "request": "launch",
-      "url": "http://localhost:5173",
-      "webRoot": "${workspaceFolder}/frontend/src"
+      "program": "${workspaceFolder}/scripts/ingest_sample_data.py",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env"
     },
     {
       "name": "Debug Tests",
       "type": "python",
       "request": "launch",
       "module": "pytest",
-      "args": ["-v", "-s"],
+      "args": ["-v", "-s", "--no-cov"],
       "cwd": "${workspaceFolder}"
     }
   ]
 }
 ```
 
-## 7. Troubleshooting
+## 9. Troubleshooting
 
-### 7.1 Common Issues
+### 9.1 Common Issues
 
-| Issue | Solution |
-|-------|----------|
-| Port already in use | `lsof -i :PORT` then `kill -9 PID` |
-| Docker out of space | `docker system prune -a` |
-| Slow performance | Increase Docker memory in preferences |
-| GROBID timeout | Reduce batch size in config |
-| Neo4j won't start | Check memory settings, clear volume |
-| Frontend hot reload not working | Check volume mounts, restart service |
+| Issue                  | Solution                                       |
+|------------------------|------------------------------------------------|
+| OpenAlex rate limiting | Reduce OPENALEX_RATE_LIMIT in .env, add delays |
+| Missing Work Objects   | Check internet connection, verify DOI format   |
+| Neo4j out of memory    | Increase heap size in docker-compose.yml       |
+| Redis cache full       | Increase maxmemory in redis.conf               |
+| Slow metadata fetching | Use batch operations, increase workers         |
+| GROBID timeout on PDFs | Process smaller batches, increase timeout      |
 
-### 7.2 Performance Profiling
-
-```bash
-# Profile Python service
-python -m cProfile -o profile.stats services/query/main.py
-
-# Analyze profile
-python -m pstats profile.stats
-
-# Profile Node.js service
-node --prof services/gateway/index.js
-node --prof-process isolate-*.log > profile.txt
-
-# Monitor Docker resource usage
-docker stats
-
-# Check query performance
-curl -w "@curl-format.txt" -o /dev/null -s "http://localhost:3000/api/v1/query"
-```
-
-### 7.3 Log Files
+### 9.2 OpenAlex-Specific Debugging
 
 ```bash
-# All logs are in ./logs/
+# Check OpenAlex request logs
+tail -f logs/openalex/requests.log
 
-# View specific service logs
-tail -f logs/services/query-service.log
+# Monitor rate limiting
+grep "429" logs/openalex/requests.log | tail -20
 
-# Search for errors across all logs
-grep -r ERROR logs/
+# Verify Work Object structure
+cat data/works/W*/work.json | jq '.id, .title, .cited_by_count' | head -20
 
-# View structured logs with jq
-tail -f logs/services/api-gateway.log | jq '.'
+# Check citation relationships
+echo "MATCH (w:Work)-[:CITES]->() RETURN w.id, COUNT(*) as out_citations ORDER BY out_citations DESC LIMIT 10" | cypher-shell -u neo4j -p leibniz123
+
+# Debug missing metadata
+python3 << 'EOF'
+import json
+from pathlib import Path
+
+works_dir = Path("data/works")
+total = 0
+missing_abstract = 0
+missing_venue = 0
+
+for work_file in works_dir.glob("*/work.json"):
+    with open(work_file) as f:
+        work = json.load(f)
+    total += 1
+    if not work.get('abstract'):
+        missing_abstract += 1
+    if not work.get('host_venue'):
+        missing_venue += 1
+
+print(f"Total works: {total}")
+print(f"Missing abstracts: {missing_abstract} ({missing_abstract/total*100:.1f}%)")
+print(f"Missing venues: {missing_venue} ({missing_venue/total*100:.1f}%)")
+EOF
 ```
 
-## 8. First Query Walkthrough
-
-### 8.1 Verify Everything Works
+### 9.3 Performance Profiling
 
 ```bash
-# 1. Check all services are healthy
-./scripts/health-check.sh
+# Profile OpenAlex ingestion
+python -m cProfile -o profile.stats scripts/ingest_sample_data.py
+python -m pstats profile.stats << EOF
+sort cumulative
+stats 20
+EOF
 
-# 2. Load sample data (if not already done)
-./scripts/load-sample-data.sh --papers 100
+# Monitor API response times
+grep "response_time" logs/openalex/requests.log | \
+  awk '{sum+=$NF; count++} END {print "Average:", sum/count "ms"}'
 
-# 3. Test vector search
-curl -X POST http://localhost:3000/api/v1/query \
-  -H "Content-Type: application/json" \
-  -d '{"query": "transformer efficiency"}'
-
-# 4. Open frontend
-open http://localhost:5173
-
-# 5. Try a search in the UI
-# Type: "sparse attention transformers"
-# You should see results in <200ms
+# Check cache effectiveness
+redis-cli info stats | grep -E "keyspace_hits|keyspace_misses"
 ```
 
-### 8.2 Monitor Performance
+## 10. Data Verification
+
+### 10.1 Verify Data Completeness
 
 ```bash
-# Terminal 1: Watch query latencies
-watch -n 1 'tail -n 20 logs/metrics/query-latency.log'
+#!/bin/bash
+# scripts/verify-data.sh
 
-# Terminal 2: Monitor service health
-watch -n 5 './scripts/health-check.sh'
+echo "🔍 Verifying OpenAlex data completeness..."
 
-# Terminal 3: Track resource usage
-docker stats
+# Count Work Objects
+WORK_COUNT=$(find data/works -name "work.json" | wc -l)
+echo "Work Objects: $WORK_COUNT"
+
+# Count PDFs
+PDF_COUNT=$(find data/works -name "paper.pdf" | wc -l)
+echo "PDFs: $PDF_COUNT"
+
+# Count TEI XML files
+TEI_COUNT=$(find data/works -name "grobid.tei.xml" | wc -l)
+echo "TEI files: $TEI_COUNT"
+
+# Check Redis cache
+echo -e "\nRedis cache:"
+redis-cli --raw KEYS "oa:work:*" | wc -l | xargs echo "  Cached works:"
+redis-cli --raw KEYS "oa:citations:*" | wc -l | xargs echo "  Cached citations:"
+
+# Check Neo4j
+echo -e "\nNeo4j graph:"
+echo "MATCH (w:Work) RETURN COUNT(w)" | cypher-shell -u neo4j -p leibniz123 --format plain | grep -o '[0-9]\+' | xargs echo "  Work nodes:"
+echo "MATCH ()-[c:CITES]->() RETURN COUNT(c)" | cypher-shell -u neo4j -p leibniz123 --format plain | grep -o '[0-9]\+' | xargs echo "  Citation edges:"
+echo "MATCH (a:Author) RETURN COUNT(a)" | cypher-shell -u neo4j -p leibniz123 --format plain | grep -o '[0-9]\+' | xargs echo "  Author nodes:"
+echo "MATCH (v:Venue) RETURN COUNT(v)" | cypher-shell -u neo4j -p leibniz123 --format plain | grep -o '[0-9]\+' | xargs echo "  Venue nodes:"
 ```
 
-## 9. Data Loading
-
-### 9.1 Quick Sample Data
-
-```bash
-# Load 100 sample papers for testing
-./scripts/load-sample-data.sh --papers 100
-
-# This creates synthetic papers with:
-# - Realistic titles and abstracts
-# - Valid embeddings
-# - Graph relationships
-# - Search indices
-```
-
-### 9.2 Full Dataset Loading
-
-```bash
-# Download real papers (runs in background)
-nohup ./scripts/download-papers.sh &
-
-# Process through GROBID (parallelized)
-./scripts/process-papers.sh --workers 8
-
-# Generate embeddings
-./scripts/generate-embeddings.sh --batch-size 100
-
-# Build graph
-./scripts/build-graph.sh
-
-# Create search indices
-./scripts/build-indices.sh
-```
-
-## 10. Quick Reference Card
+## 11. Quick Reference Card
 
 ```bash
 # === MOST COMMON COMMANDS ===
 
 # Start everything
 make dev
+
+# Load sample data with OpenAlex
+make ingest-data
+
+# Check what's loaded
+make cache-status
 
 # Stop everything  
 make stop
@@ -621,28 +909,36 @@ make stop
 docker-compose logs -f [service-name]
 
 # Test a query
-curl localhost:3000/api/v1/query -d '{"query":"your search"}'
+curl localhost:3000/api/v1/query -d '{"query":"transformer efficiency"}'
 
 # Check health
 ./scripts/health-check.sh
 
-# Benchmark performance
-python scripts/benchmark.py
+# Verify OpenAlex data
+./scripts/verify-data.sh
 
 # === SERVICE URLS ===
 Frontend:        http://localhost:5173
 API:            http://localhost:3000
-Neo4j Browser:  http://localhost:7474
+Neo4j Browser:  http://localhost:7474 (neo4j/leibniz123)
 QDrant UI:      http://localhost:6333/dashboard
 Meilisearch:    http://localhost:7700
 
-# === USEFUL ALIASES ===
-alias pl-logs='docker-compose logs -f'
-alias pl-restart='docker-compose restart'
-alias pl-status='./scripts/health-check.sh'
+# === USEFUL COMMANDS ===
+# Ingest specific paper
+python scripts/ingest_paper.py --doi "10.1145/3297280.3297641"
+
+# Query Neo4j
+cypher-shell -u neo4j -p leibniz123
+
+# Monitor Redis
+redis-cli monitor | grep -E "oa:work:|qr:"
+
+# Check OpenAlex cache
+redis-cli --raw KEYS "oa:*" | head -20
 ```
 
 ---
 
-**Setup Time:** 30 minutes  
-**Next Step:** Start coding with `make dev`!
+**Setup Time:** 30 minutes including data loading  
+**Next Step:** Run `make ingest-data` to populate with real papers!
