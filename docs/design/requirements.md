@@ -1,7 +1,7 @@
 # Project Leibniz - Requirements Analysis Document
 
 **Version:** 1.0  
-**Date:** December 2024  
+**Date:** June 2025
 **Status:** Draft  
 **Classification:** Internal Development
 
@@ -344,7 +344,7 @@ Weekend prototype covering ICLR, ICML, and NeurIPS papers from 2020-2024 (~5,000
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | Dec 2024 | Project Team | Initial requirements analysis |
+| 1.0 | Jun 2025 | Project Team | Initial requirements analysis |
 
 ---
 
