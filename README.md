@@ -98,4 +98,4 @@ Data is stored according to XDG Base Directory specification:
 
 ## License
 
-MIT
+GPL-3.0
