@@ -20,6 +20,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker service health check scripts
 - Makefile for common development tasks
 
+### Added
+- Mock services framework for Codex/offline development (Task 0.0.1)
+- RedisMock with TTL support for in-memory caching
+- Neo4jDriverMock with pre-populated test graph data
+- QdrantMock with vector search simulation
+- MeilisearchMock with keyword search functionality
+- OpenAIMock for embeddings and synthesis without API calls
+- GrobidMock for PDF parsing simulation
+- Service factory pattern supporting mock/real service switching
+- Test fixtures and data generators for realistic test scenarios
+- Environment detection for automatic mock usage in Codex
+
+### Development
+- Added LEIBNIZ_USE_MOCKS environment variable for forced mock usage
+- Configured pytest to automatically use mocks in test environment
+- All mocks support async operations matching real service interfaces
+
 ### Security
 - Clear separation of public code and private configuration
 - Environment-based secrets management
