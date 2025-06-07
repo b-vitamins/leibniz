@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.codex
 config/local.py
 config/secrets.py
 *_local.py
