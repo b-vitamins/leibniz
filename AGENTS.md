@@ -1,7 +1,40 @@
-# Contributor Guide
+# Contributor Guide - Project Leibniz
 
 ## Project Overview
 Project Leibniz delivers "research at the speed of thought" - a <200ms semantic search system for ML literature. Every line of code must serve this goal.
+
+## Codex Environment Setup
+
+In Codex environment, external services (Redis, Neo4j, etc.) won't be available. Use these patterns:
+
+```python
+# GOOD: Graceful fallback for missing services
+import os
+from unittest.mock import MagicMock
+
+def get_redis_client():
+    """Get Redis client with fallback for testing."""
+    if os.getenv("CODEX_ENVIRONMENT") or not is_redis_available():
+        # Return mock for testing without Redis
+        mock = MagicMock()
+        mock.get = lambda k: None
+        mock.setex = lambda k, ttl, v: True
+        return mock
+    
+    return redis.Redis(host="localhost", port=6379)
+
+def is_redis_available():
+    """Check if Redis is running."""
+    try:
+        client = redis.Redis(host="localhost", port=6379)
+        client.ping()
+        return True
+    except:
+        return False
+
+# Use environment variable to detect Codex
+IS_CODEX = os.getenv("CODEX_ENVIRONMENT", "").lower() == "true"
+```
 
 ## Quick Setup
 ```bash
