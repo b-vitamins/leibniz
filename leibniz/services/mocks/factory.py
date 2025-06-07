@@ -1,6 +1,8 @@
 """Factory for creating mock or real service clients."""
+# ruff: noqa: ANN401
 
 import os
+from typing import Any
 
 from .grobid_mock import GrobidMock
 from .meilisearch_mock import MeilisearchMock
@@ -16,7 +18,7 @@ USE_MOCKS = (
 )
 
 
-def get_redis_client(**kwargs: object) -> object:
+def get_redis_client(**kwargs: Any) -> Any:
     """Get Redis client (mock or real)."""
     if USE_MOCKS:
         return RedisMock()
@@ -28,7 +30,7 @@ def get_redis_client(**kwargs: object) -> object:
         return RedisMock()
 
 
-def get_neo4j_driver(**kwargs: object) -> object:
+def get_neo4j_driver(**kwargs: Any) -> Any:
     """Get Neo4j driver (mock or real)."""
     if USE_MOCKS:
         return Neo4jDriverMock()
@@ -40,31 +42,31 @@ def get_neo4j_driver(**kwargs: object) -> object:
         return Neo4jDriverMock()
 
 
-def get_qdrant_client(**kwargs: object) -> object:
+def get_qdrant_client(**kwargs: Any) -> Any:
     """Get QDrant client (mock or real)."""
     if USE_MOCKS:
-        return QdrantMock(**kwargs)
+        return QdrantMock()
     try:
         from qdrant_client import QdrantClient
 
         return QdrantClient(**kwargs)
     except Exception:  # noqa: BLE001
-        return QdrantMock(**kwargs)
+        return QdrantMock()
 
 
-def get_meilisearch_client(**kwargs: object) -> object:
+def get_meilisearch_client(**kwargs: Any) -> Any:
     """Get Meilisearch client (mock or real)."""
     if USE_MOCKS:
-        return MeilisearchMock(**kwargs)
+        return MeilisearchMock()
     try:
         import meilisearch
 
         return meilisearch.Client(**kwargs)
     except Exception:  # noqa: BLE001
-        return MeilisearchMock(**kwargs)
+        return MeilisearchMock()
 
 
-def get_openai_client(**kwargs: object) -> object:
+def get_openai_client(**kwargs: Any) -> Any:
     """Get OpenAI client (mock or real)."""
     if USE_MOCKS:
         return OpenAIMock()
@@ -76,7 +78,7 @@ def get_openai_client(**kwargs: object) -> object:
         return OpenAIMock()
 
 
-def get_grobid_client(**kwargs: object) -> object:
+def get_grobid_client(**kwargs: Any) -> Any:
     """Get GROBID client (mock or real)."""
     if USE_MOCKS:
         return GrobidMock(**kwargs)

@@ -6,7 +6,9 @@ from typing import Any
 class MeilisearchMock:
     """Mock Meilisearch client."""
 
-    def __init__(self, _url: str, _api_key: str | None = None) -> None:
+    def __init__(
+        self, _url: str = "http://localhost:7700", _api_key: str | None = None
+    ) -> None:
         self.indexes = {
             "papers": MeilisearchIndexMock(),
         }
