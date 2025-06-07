@@ -1,5 +1,5 @@
 fastapi==0.115.6
-uvicorn[standard]==0.34.0
+uvicorn[standard]==0.34.3
 qdrant-client==1.14.2
 neo4j==5.28.1
 meilisearch==0.34.1
