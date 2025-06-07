@@ -49,6 +49,12 @@ docker-compose up -d
 | Node.js | 18+ | `node --version` | https://nodejs.org |
 | Make | 3.81+ | `make --version` | Usually pre-installed |
 
+Run `scripts/verify-docker.sh` to confirm Docker is ready:
+
+```bash
+./scripts/verify-docker.sh
+```
+
 ### 2.2 Hardware Requirements
 
 - **RAM:** 16GB minimum (32GB recommended)

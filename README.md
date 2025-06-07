@@ -20,6 +20,22 @@ Research intelligence system for ML literature.
   - Meilisearch (port 7700)
   - GROBID (port 8070)
 
+## Prerequisites Verification
+
+Check your Docker installation before running the setup scripts:
+
+```bash
+make verify-docker
+# or
+./scripts/verify-docker.sh
+```
+
+This script verifies:
+- Docker version (20.10+ recommended)
+- Docker daemon status
+- Docker Compose availability
+- Available disk space (100GB recommended)
+
 ## Quick Start
 
 ```bash

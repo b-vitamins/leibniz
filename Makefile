@@ -1,9 +1,10 @@
-.PHONY: help install init check test lint format clean
+.PHONY: help install init check verify-docker test lint format clean
 
 help:
 	@echo "Leibniz Development Commands"
 	@echo "  make init      - Initialize local directories and check setup"
 	@echo "  make check     - Check configuration and services"
+	@echo "  make verify-docker - Verify Docker installation"
 	@echo "  make test      - Run test suite"
 	@echo "  make lint      - Run linters"
 	@echo "  make format    - Format code with black"
@@ -15,6 +16,9 @@ init:
 check:
 	./scripts/check-services.sh
 	python -m leibniz.cli check
+
+verify-docker:
+	./scripts/verify-docker.sh
 
 test:
 	pytest -v
