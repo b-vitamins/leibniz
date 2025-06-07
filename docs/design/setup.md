@@ -11,7 +11,7 @@
 
 ```bash
 # Clone and setup everything
-git clone https://github.com/yourusername/project-leibniz.git
+git clone https://github.com/b-vitamins/project-leibniz.git
 cd project-leibniz
 ./scripts/setup.sh  # Runs everything below automatically
 ```

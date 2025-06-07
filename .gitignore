@@ -138,3 +138,13 @@ config/local/
 config/secrets/
 config/private/
 
+
+# CI/CD artifacts
+.coverage
+coverage.xml
+htmlcov/
+.benchmarks/
+benchmark.json
+dist/
+build/
+*.egg-info/
