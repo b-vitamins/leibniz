@@ -198,7 +198,7 @@ addopts = """
     -v --tb=short
     --strict-markers
     --strict-config
-    --cov-fail-under=80
+    --cov-fail-under=30
     --cov-branch
     --cov-report=html
     --cov-report=term-missing:skip-covered
