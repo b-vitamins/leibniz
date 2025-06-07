@@ -26,7 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker Compose configuration for all infrastructure services (Task 1.1.3)
 - Service health checks and optimized resource limits for <200ms performance
 - Makefile targets for Docker service management
-- Next task: 1.1.4 - Start all infrastructure services
+- Infrastructure services started and verified (Tasks 1.1.4-1.1.5) ✅
+- Next task: 1.2.1 - Download paper PDFs
 
 ### Added
 - Mock services framework for Codex/offline development (Task 0.0.1)
