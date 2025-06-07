@@ -1,7 +1,7 @@
 # Project Leibniz - System Architecture Design Document
 
 **Version:** 1.0  
-**Date:** December 2024  
+**Date:** June 2025
 **Status:** Draft  
 **Classification:** Internal Development
 
@@ -788,7 +788,7 @@ class QuickstartUser(HttpUser):
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | Dec 2024 | Project Team | Initial architecture design |
+| 1.0 | Jun 2025 | Project Team | Initial architecture design |
 
 ---
 

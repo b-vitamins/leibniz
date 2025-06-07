@@ -1,7 +1,7 @@
 # Project Leibniz - Development Environment Setup Guide
 
 **Version:** 1.0  
-**Date:** December 2024  
+**Date:** June 2025
 **Status:** Ready for Use  
 **Time to Complete:** 30 minutes
 

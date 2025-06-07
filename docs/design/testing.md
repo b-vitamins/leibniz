@@ -1,7 +1,7 @@
 # Project Leibniz - Test Plan & API Contracts
 
 **Version:** 1.0  
-**Date:** December 2024  
+**Date:** June 2025
 **Status:** Ready for Implementation
 
 ---
