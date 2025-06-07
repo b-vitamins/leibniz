@@ -19,7 +19,7 @@
    "python-httpx"
    "python-pydantic"
    "python-pydantic-settings"
-   "python-numpy"
+   "python-numpy@1"
    "python-rich"
    "python-typer"
    "python-openai"
