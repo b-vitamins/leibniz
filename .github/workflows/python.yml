@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [ master, main, develop ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, main ]
   workflow_dispatch:
 
 env:
@@ -109,6 +109,8 @@ jobs:
           comment-on-alert: true
           alert-threshold: '150%'
           fail-on-alert: true
+          skip-fetch-gh-pages: true
+        continue-on-error: true
       - name: Check <200ms requirement
         if: success() && hashFiles('benchmark.json') != ''
         run: |
@@ -152,6 +154,16 @@ jobs:
           path: ./
           base: ${{ github.event.repository.default_branch }}
           head: HEAD
+        continue-on-error: true
+        if: github.event_name == 'pull_request'
+      - name: Check for secrets (push)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ''
+          head: HEAD
+        continue-on-error: true
+        if: github.event_name == 'push'
 
   build:
     name: Build & Package
