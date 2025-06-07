@@ -43,9 +43,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Git hooks for preventing secret commits
 - Comprehensive .gitignore for sensitive files
 
+### Added
+- GitHub Actions CI workflow for automated testing and quality checks (Task 0.0.2)
+- Multi-job CI pipeline: lint, test, performance, security, build, docs
+- Performance benchmark automation with <200ms validation
+- Local CI script for pre-push validation (scripts/ci-local.sh)
+- PR template with performance impact checklist
+- Dependabot configuration for dependency updates
+- Codecov integration for test coverage tracking
+- Security scanning with Bandit and Trufflehog
+
+### Development
+- CI enforces code quality standards (ruff, mypy)
+- Automated performance regression detection
+- Matrix testing for Python 3.11 and 3.12
+- All CI jobs use mock services (no external dependencies)
+
 ## [0.1.0] - TBD
 
 Initial development version. Not yet released.
 
-[Unreleased]: https://github.com/yourusername/leibniz/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/yourusername/leibniz/releases/tag/v0.1.0
+[Unreleased]: https://github.com/b-vitamins/leibniz/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/b-vitamins/leibniz/releases/tag/v0.1.0
