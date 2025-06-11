@@ -656,3 +656,50 @@ Every feature should enhance one of these demos:
 4. Progressive loading that feels instant
 
 Remember: We're competing with thought speed. Make it feel like magic.
+
+## Development Process Guidelines
+
+### Commit Message Standards
+- Use the [Conventional Commits](https://www.conventionalcommits.org) style.
+- Structure: `type(scope): subject` e.g. `feat(api): add query endpoint`.
+- Include a body when further explanation is needed.
+- Use the footer to reference issues (e.g. `Closes #123`).
+
+### Commit Sequencing
+- Keep commits atomic and logically grouped.
+- Order commits so that linters and tests pass after each commit.
+
+### Pull Request Standards
+- Title: short imperative summary (e.g. `Add setup-dev script`).
+- Description should include `Summary`, `Testing`, and `Future Work` sections.
+- Ensure all CI checks pass before requesting review.
+
+### Code Housekeeping
+- Run `ruff check . --fix` and `ruff format .` before committing.
+- Update dependencies monthly using Dependabot or equivalent.
+- Remove dead code during regular refactoring.
+
+### Architecture and Design
+- Document significant decisions in `/docs/design` using ADR format.
+- Keep modules small and focused; API code lives under `leibniz/api`.
+
+### Pre-commit Checks
+- Lint: `ruff check leibniz tests`
+- Type checking: `mypy leibniz`
+- Unit tests: `pytest tests/unit`
+
+### Version Management
+- Follow [Semantic Versioning](https://semver.org/) for releases.
+- Tag releases as `vMAJOR.MINOR.PATCH`.
+
+### CHANGELOG Maintenance
+- Update `CHANGELOG.md` in every PR that changes behavior.
+- Use categories: Added, Changed, Fixed, Removed.
+
+### Testing Standards
+- Aim for unit tests covering critical logic.
+- Performance tests live in `tests/performance`.
+
+### Documentation Standards
+- Keep `README.md` up to date with setup instructions.
+- Document new modules and APIs with docstrings.
