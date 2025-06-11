@@ -43,22 +43,25 @@ This script verifies:
 git clone <repository-url>
 cd leibniz
 
-# 2. Run the setup script
+# 2. Setup development environment
+./setup-dev.sh
+
+# 3. Run the setup script
 ./setup.sh
 
-# 3. Create local configuration
+# 4. Create local configuration
 ./setup-local.sh
 
-# 4. Edit .env with your credentials
+# 5. Edit .env with your credentials
 $EDITOR .env
 
-# 5. Install dependencies (Guix)
+# 6. Install dependencies (Guix)
 guix shell -m manifest.scm
 
-# 6. Initialize Leibniz
+# 7. Initialize Leibniz
 python -m leibniz.cli init
 
-# 7. Check everything is working
+# 8. Check everything is working
 python -m leibniz.cli check
 ```
 
