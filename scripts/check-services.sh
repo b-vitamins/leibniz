@@ -10,7 +10,7 @@ check_port() {
     SERVICE=$1
     HOST=$2
     PORT=$3
-    
+
     if command -v nc >/dev/null 2>&1; then
         # Use netcat if available
         if nc -z $HOST $PORT 2>/dev/null; then
